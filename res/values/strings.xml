@@ -54,8 +54,8 @@
     
     <!-- for spinner_testNames -->
     <string-array name="test_names">
-        <item>Show + capture camera</item>
         <item>Play video (TextureView)</item>
+        <item>Show + capture camera</item>
         <item>glReadPixels speed</item>
         <item>Basic GL in TextureView</item>
         <item>Live camera (TextureView)</item>

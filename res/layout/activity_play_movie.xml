@@ -24,28 +24,42 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".PlayMovieActivity" >
 
-    <Button
-        android:id="@+id/play_stop_button"
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:text="@string/play_button_text"
-        android:onClick="clickPlayStop" />
+	<LinearLayout
+	    android:id="@+id/button_holder"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:orientation="horizontal" >
 
+	    <Button
+	        android:id="@+id/play_stop_button"
+	        style="?android:attr/buttonStyleSmall"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:text="@string/play_button_text"
+	        android:onClick="clickPlayStop" />
+	
+	    <Button
+	        android:id="@+id/pause_button"
+	        style="?android:attr/buttonStyleSmall"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:text="Pause"
+	        android:onClick="clickPause" />	    
+	</LinearLayout>
+    
     <Spinner
         android:id="@+id/playMovieFile_spinner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/play_stop_button"
-        android:layout_toRightOf="@+id/play_stop_button" />
+        android:layout_alignTop="@+id/button_holder"
+        android:layout_toRightOf="@+id/button_holder" />
     
     <CheckBox
         android:id="@+id/locked60fps_checkbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignLeft="@+id/movie_texture_view"
-        android:layout_below="@+id/play_stop_button"
+        android:layout_below="@+id/button_holder"
         android:text="@string/locked60fps_checkbox" />
 
     <CheckBox
@@ -61,7 +75,7 @@
         android:id="@+id/movie_texture_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/play_stop_button"
+        android:layout_alignLeft="@+id/button_holder"
         android:layout_below="@+id/locked60fps_checkbox" />
 
 </RelativeLayout>

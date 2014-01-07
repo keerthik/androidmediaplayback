@@ -16,30 +16,30 @@
 
 package com.android.grafika;
 
-import android.os.AsyncTask;
-import android.os.Bundle;
 import android.app.Activity;
 import android.graphics.SurfaceTexture;
+import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Spinner;
-import android.widget.AdapterView.OnItemSelectedListener;
 
-import java.io.File;
-import java.io.IOException;
+import com.activetheoryinc.playback.PlayMovieTask;
+import com.activetheoryinc.playback.SpeedControlCallback;
 
 /**
  * Play a movie from a file on disk.  Output goes to a TextureView.
  * <p>
  * Currently video-only.
  */
-public class PlayMovieActivity extends Activity implements OnItemSelectedListener {
+public class PlayMovieActivity extends Activity implements OnItemSelectedListener, PlayMovieTask.MovieTaskListener {
     private static final String TAG = MainActivity.TAG;
 
     private TextureView mTextureView;
@@ -59,7 +59,16 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         Spinner spinner = (Spinner) findViewById(R.id.playMovieFile_spinner);
         // Need to create one of these fancy ArrayAdapter thingies, and specify the generic layout
         // for the widget itself.
-        mMovieFiles = FileUtils.getFiles(getFilesDir(), "*.mp4");
+        String [] _mMovieFiles = FileUtils.getFiles(getFilesDir(), "*.mp4");
+        int added = 3;
+        int n = _mMovieFiles.length + added;
+        mMovieFiles = new String[n];
+        for (int i = added; i < n; i++) {
+        	mMovieFiles[i] = _mMovieFiles[i-added];
+        }
+        mMovieFiles[0] = Environment.getExternalStorageDirectory().getPath() + "/Movies/videoviewdemo.mp4";
+        mMovieFiles[1] = "http://edge.bitgym.com/blank_640x360_2048k_1.33x.mp4";
+        mMovieFiles[2] = "http://bgstreaming.s3.amazonaws.com/providers/virtual-active/ATRNPK0110/full-video.mp4";
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, mMovieFiles);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -96,18 +105,20 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
     }
 
     @Override public void onNothingSelected(AdapterView<?> parent) {}
-
+    
+    public void clickPause(View unused) {
+    	if (mPlayTask == null) return;
+    	mPlayTask.flipPause();
+    }
+    
     /**
      * onClick handler for "play"/"stop" button.
      */
     public void clickPlayStop(View unused) {
         if (mShowStopLabel) {
-            Log.d(TAG, "stopping movie");
             stopPlayback();
             // Don't update the controls here -- let the async task do it after the movie has
             // actually stopped.
-            //mShowStopLabel = false;
-            //updateControls();
         } else {
             if (mPlayTask != null) {
                 Log.w(TAG, "movie already playing");
@@ -116,11 +127,13 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
             Log.d(TAG, "starting movie");
             SpeedControlCallback callback = new SpeedControlCallback();
             if (((CheckBox) findViewById(R.id.locked60fps_checkbox)).isChecked()) {
-                callback.setFixedPlaybackRate(60);
+                callback.setFixedPlaybackRate(15);
+            } else {
+            	callback.setFixedPlaybackRate(30);
             }
             SurfaceTexture st = mTextureView.getSurfaceTexture();
-            mPlayTask = new PlayMovieTask(new File(getFilesDir(), mMovieFiles[mSelectedMovie]),
-                    new Surface(st), callback);
+            mPlayTask = new PlayMovieTask(mMovieFiles[mSelectedMovie],
+                    new Surface(st), callback, this);
             if (((CheckBox) findViewById(R.id.loopPlayback_checkbox)).isChecked()) {
                 mPlayTask.setLoopMode(true);
             }
@@ -159,64 +172,14 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         check.setEnabled(!mShowStopLabel);
     }
 
+	@Override
+	public void onFinishMovie() {
+        mShowStopLabel = false;
+        updateControls();
+        mPlayTask = null;		
+	}
+
     /**
      * Plays a movie in an async task thread.  Updates the UI when the movie finishes.
      */
-    private class PlayMovieTask extends AsyncTask<Void, Void, Void> {
-        private File mFile;
-        private Surface mSurface;
-        private SpeedControlCallback mCallback;
-        private boolean mLoop;
-
-        /**
-         * Create task.  The surface will be released when playback finishes.
-         */
-        public PlayMovieTask(File file, Surface surface, SpeedControlCallback callback) {
-            mFile = file;
-            mSurface = surface;
-            mCallback = callback;
-        }
-
-        /**
-         * Sets the loop mode.  If true, playback will loop forever.
-         */
-        public void setLoopMode(boolean loopMode) {
-            mLoop = loopMode;
-        }
-
-        /**
-         * Requests that playback stop.
-         */
-        public void requestStop() {
-            mCallback.requestStop();
-        }
-
-        @Override   // async task thread
-        protected Void doInBackground(Void... params) {
-            try {
-                MoviePlayer player = new MoviePlayer(mFile, mSurface);
-                player.setLoopMode(mLoop);
-                player.play(mCallback);
-            } catch (IOException ioe) {
-                Log.e(TAG, "movie playback failed", ioe);
-            } finally {
-                mSurface.release();
-            }
-            return null;
-        }
-
-        @Override   // UI thread
-        protected void onProgressUpdate(Void... progress) {
-            // unused
-        }
-
-        @Override   // UI thread
-        protected void onPostExecute(Void result) {
-            // Update the controls after playback completes (or is manually stopped).
-            Log.d(TAG, "playback complete");
-            mShowStopLabel = false;
-            updateControls();
-            mPlayTask = null;
-        }
-    }
 }
