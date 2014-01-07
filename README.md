@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Grafika
 =======
 
@@ -28,3 +29,9 @@ There is some overlap with the code on http://www.bigflake.com/mediacodec/.  The
 
 Features are added to Grafika as the need arises, often in response to developer complaints about correctness or performance problems in the platform (either to confirm that the problems exist, or demonstrate that they don't).
 
+=======
+androidmediaplayback
+====================
+
+Post-Jellybean Android MediaCodec class based video playback
+>>>>>>> 58345385b07548276b8f6963ffae0478c6faeca3
