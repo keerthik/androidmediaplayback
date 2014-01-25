@@ -29,6 +29,8 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.Spinner;
 
 import com.activetheoryinc.playback.PlayMovieTask;
@@ -39,7 +41,7 @@ import com.activetheoryinc.playback.SpeedControlCallback;
  * <p>
  * Currently video-only.
  */
-public class PlayMovieActivity extends Activity implements OnItemSelectedListener, PlayMovieTask.MovieTaskListener {
+public class PlayMovieActivity extends Activity implements OnItemSelectedListener, PlayMovieTask.MovieTaskListener, OnSeekBarChangeListener {
     private static final String TAG = MainActivity.TAG;
 
     private TextureView mTextureView;
@@ -57,6 +59,7 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
 
         // Populate file-selection spinner.
         Spinner spinner = (Spinner) findViewById(R.id.playMovieFile_spinner);
+        SeekBar seekbar = (SeekBar) findViewById(R.id.playMovie_speed);
         // Need to create one of these fancy ArrayAdapter thingies, and specify the generic layout
         // for the widget itself.
         String [] _mMovieFiles = FileUtils.getFiles(getFilesDir(), "*.mp4");
@@ -75,23 +78,28 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         // Apply the adapter to the spinner.
         spinner.setAdapter(adapter);
         spinner.setOnItemSelectedListener(this);
+        seekbar.setOnSeekBarChangeListener(this);
     }
 
     @Override
-    protected void onResume() {
-        Log.d(TAG, "PlayMovieActivity onResume");
-        super.onResume();
-    }
-
+	protected void onPause() {
+        Log.i(TAG, "PlayMovieActivity onPause");
+		super.onPause();
+		if (mPlayTask != null) {
+			mPlayTask.requestStop();
+		}
+		//unbindService(mConnection);
+	}
+	
     @Override
-    protected void onPause() {
-        Log.d(TAG, "PlayMovieActivity onPause");
-        super.onPause();
-        // We're not keeping track of the state in static fields, so we need to shut the
-        // playback down.  Ideally we'd preserve the state so that the player would continue
-        // after a device rotation.
-        stopPlayback();
-    }
+	protected void onResume() {
+		super.onResume();
+		if (mPlayTask != null) {
+	        Log.i(TAG, "PlayMovieActivity onResume");
+			mPlayTask.onResume();
+		}
+	}
+
 
     /*
      * Called when the movie Spinner gets touched.
@@ -106,41 +114,50 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
 
     @Override public void onNothingSelected(AdapterView<?> parent) {}
     
+    private boolean paused = false;
     public void clickPause(View unused) {
     	if (mPlayTask == null) return;
-    	mPlayTask.flipPause();
+    	//mPlayTask.flipPause();
+    	paused = !paused;
+    	mPlayTask.SetRateAndGetStatus(paused?.5f:0f);
     }
     
     /**
      * onClick handler for "play"/"stop" button.
      */
+    private SpeedControlCallback callback;
+    private void startMovie() {
+        if (mPlayTask != null) {
+            Log.w(TAG, "movie already playing");
+            return;
+        }
+        Log.d(TAG, "starting movie");
+        callback = new SpeedControlCallback();
+        SurfaceTexture st = mTextureView.getSurfaceTexture();
+        mPlayTask = new PlayMovieTask(mMovieFiles[mSelectedMovie],
+                new Surface(st), callback, this);
+        if (((CheckBox) findViewById(R.id.loopPlayback_checkbox)).isChecked()) {
+            mPlayTask.setLoopMode(true);
+        }
+        if (((CheckBox) findViewById(R.id.locked60fps_checkbox)).isChecked()) {
+            callback.setFixedPlaybackRate(15);
+            //mPlayTask.SetRateAndGetStatus(1f);
+        } else {
+        	callback.setFixedPlaybackRate(30);
+        	//mPlayTask.SetRateAndGetStatus(0.5f);
+        }
+
+        mShowStopLabel = true;
+        updateControls();
+        mPlayTask.execute();    	
+    }
     public void clickPlayStop(View unused) {
         if (mShowStopLabel) {
             stopPlayback();
             // Don't update the controls here -- let the async task do it after the movie has
             // actually stopped.
         } else {
-            if (mPlayTask != null) {
-                Log.w(TAG, "movie already playing");
-                return;
-            }
-            Log.d(TAG, "starting movie");
-            SpeedControlCallback callback = new SpeedControlCallback();
-            if (((CheckBox) findViewById(R.id.locked60fps_checkbox)).isChecked()) {
-                callback.setFixedPlaybackRate(15);
-            } else {
-            	callback.setFixedPlaybackRate(30);
-            }
-            SurfaceTexture st = mTextureView.getSurfaceTexture();
-            mPlayTask = new PlayMovieTask(mMovieFiles[mSelectedMovie],
-                    new Surface(st), callback, this);
-            if (((CheckBox) findViewById(R.id.loopPlayback_checkbox)).isChecked()) {
-                mPlayTask.setLoopMode(true);
-            }
-
-            mShowStopLabel = true;
-            updateControls();
-            mPlayTask.execute();
+        	startMovie();
         }
     }
 
@@ -179,7 +196,30 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         mPlayTask = null;		
 	}
 
+	@Override
+	public void onProgressChanged(SeekBar seekBar, int progress,
+			boolean fromUser) {
+		if (!fromUser || mPlayTask == null) {
+			Log.i(TAG, "Progress not doing anything");
+			return;
+		}
+		mPlayTask.SetRateAndGetStatus(0.01f*progress);
+	}
+
+	@Override
+	public void onStartTrackingTouch(SeekBar seekBar) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onStopTrackingTouch(SeekBar seekBar) {
+		// TODO Auto-generated method stub
+		
+	}
+
     /**
      * Plays a movie in an async task thread.  Updates the UI when the movie finishes.
      */
+	
 }

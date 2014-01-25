@@ -53,13 +53,19 @@
         android:layout_height="wrap_content"
         android:layout_alignTop="@+id/button_holder"
         android:layout_toRightOf="@+id/button_holder" />
+
+    <SeekBar
+        android:id="@+id/playMovie_speed"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/button_holder" />
     
     <CheckBox
         android:id="@+id/locked60fps_checkbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignLeft="@+id/movie_texture_view"
-        android:layout_below="@+id/button_holder"
+        android:layout_below="@+id/playMovie_speed"
         android:text="@string/locked60fps_checkbox" />
 
     <CheckBox
