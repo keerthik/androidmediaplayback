@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.grafika;
+package com.activetheoryinc.grafika;
 
 import android.app.Activity;
 import android.graphics.SurfaceTexture;
@@ -33,6 +33,7 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.Spinner;
 
+import com.activetheoryinc.grafika.R;
 import com.activetheoryinc.playback.PlayMovieTask;
 import com.activetheoryinc.playback.SpeedControlCallback;
 
@@ -42,7 +43,7 @@ import com.activetheoryinc.playback.SpeedControlCallback;
  * Currently video-only.
  */
 public class PlayMovieActivity extends Activity implements OnItemSelectedListener, PlayMovieTask.MovieTaskListener, OnSeekBarChangeListener {
-    private static final String TAG = MainActivity.TAG;
+    private static final String TAG = "Media Test";
 
     private TextureView mTextureView;
     private String[] mMovieFiles;
@@ -134,7 +135,7 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         Log.d(TAG, "starting movie");
         callback = new SpeedControlCallback();
         SurfaceTexture st = mTextureView.getSurfaceTexture();
-        mPlayTask = new PlayMovieTask(mMovieFiles[mSelectedMovie],
+        mPlayTask = new PlayMovieTask(mMovieFiles[mSelectedMovie], 0,
                 new Surface(st), callback, this);
         if (((CheckBox) findViewById(R.id.loopPlayback_checkbox)).isChecked()) {
             mPlayTask.setLoopMode(true);

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.grafika;
+package com.activetheoryinc.grafika;
 
 import android.util.Log;
 
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  * Some handy utilities.
  */
 public class FileUtils {
-    private static final String TAG = MainActivity.TAG;
+    private static final String TAG = "TestFileUtils";
 
     private FileUtils() {}
 
