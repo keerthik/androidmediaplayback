@@ -35,36 +35,12 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name="com.activetheoryinc.grafika.MainActivity"
-            android:label="@string/app_name" >
-        </activity>
-        <activity
-            android:name="com.activetheoryinc.grafika.ReadPixelsActivity"
-            android:label="@string/title_activity_read_pixels" >
-        </activity>
-        <activity
             android:name="com.activetheoryinc.grafika.PlayMovieActivity"
             android:label="@string/title_activity_play_movie" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-        <activity
-            android:name="com.activetheoryinc.grafika.LiveCameraActivity"
-            android:label="@string/title_activity_live_camera" >
-        </activity>
-        <activity
-            android:name="com.activetheoryinc.grafika.CameraCaptureActivity"
-            android:label="@string/title_activity_camera_capture" >
-        </activity>
-        <activity
-            android:name="com.activetheoryinc.grafika.TextureViewGLActivity"
-            android:label="@string/title_activity_texture_view_gl" >
-        </activity>
-        <activity
-            android:name="com.activetheoryinc.grafika.RecordFBOActivity"
-            android:label="@string/title_activity_record_fbo" >
         </activity>
     </application>
 

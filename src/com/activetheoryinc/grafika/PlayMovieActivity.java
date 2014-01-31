@@ -33,23 +33,23 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.Spinner;
 
-import com.activetheoryinc.grafika.R;
-import com.activetheoryinc.playback.PlayMovieTask;
-import com.activetheoryinc.playback.SpeedControlCallback;
+import com.activetheoryinc.playback.NexusPlaybackEngine;
+import com.activetheoryinc.playback.PlayMovieThread.MovieThreadListener;
 
 /**
  * Play a movie from a file on disk.  Output goes to a TextureView.
  * <p>
  * Currently video-only.
  */
-public class PlayMovieActivity extends Activity implements OnItemSelectedListener, PlayMovieTask.MovieTaskListener, OnSeekBarChangeListener {
+public class PlayMovieActivity extends Activity implements OnItemSelectedListener, OnSeekBarChangeListener, MovieThreadListener {
     private static final String TAG = "Media Test";
 
     private TextureView mTextureView;
     private String[] mMovieFiles;
     private int mSelectedMovie;
     private boolean mShowStopLabel;
-    private PlayMovieTask mPlayTask;
+    private NexusPlaybackEngine player;
+    //private PlayMovieTask mPlayTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +61,7 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         // Populate file-selection spinner.
         Spinner spinner = (Spinner) findViewById(R.id.playMovieFile_spinner);
         SeekBar seekbar = (SeekBar) findViewById(R.id.playMovie_speed);
+        
         // Need to create one of these fancy ArrayAdapter thingies, and specify the generic layout
         // for the widget itself.
         String [] _mMovieFiles = FileUtils.getFiles(getFilesDir(), "*.mp4");
@@ -76,29 +77,28 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, mMovieFiles);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        // Apply the adapter to the spinner.
         spinner.setAdapter(adapter);
         spinner.setOnItemSelectedListener(this);
+        
         seekbar.setOnSeekBarChangeListener(this);
+        
+        player = new NexusPlaybackEngine(this);
     }
 
     @Override
 	protected void onPause() {
         Log.i(TAG, "PlayMovieActivity onPause");
 		super.onPause();
-		if (mPlayTask != null) {
-			mPlayTask.requestStop();
-		}
-		//unbindService(mConnection);
+		player.onPause();
 	}
 	
     @Override
 	protected void onResume() {
 		super.onResume();
-		if (mPlayTask != null) {
-	        Log.i(TAG, "PlayMovieActivity onResume");
-			mPlayTask.onResume();
-		}
+
+		if (savedSurfaceTexture != null)
+			mTextureView.setSurfaceTexture(savedSurfaceTexture);
+		player.onResume();
 	}
 
 
@@ -109,48 +109,45 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
     public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
         Spinner spinner = (Spinner) parent;
         mSelectedMovie = spinner.getSelectedItemPosition();
-
         Log.d(TAG, "onItemSelected: " + mSelectedMovie + " '" + mMovieFiles[mSelectedMovie] + "'");
+        if (player.isCurrentlyPlaying()) {
+        	
+        }
     }
 
     @Override public void onNothingSelected(AdapterView<?> parent) {}
     
-    private boolean paused = false;
     public void clickPause(View unused) {
-    	if (mPlayTask == null) return;
-    	//mPlayTask.flipPause();
-    	paused = !paused;
-    	mPlayTask.SetRateAndGetStatus(paused?.5f:0f);
+    	player.flipPause();
     }
     
     /**
      * onClick handler for "play"/"stop" button.
      */
-    private SpeedControlCallback callback;
+    private SurfaceTexture savedSurfaceTexture = null;
     private void startMovie() {
-        if (mPlayTask != null) {
+        /*
+    	if (mPlayTask != null) {
             Log.w(TAG, "movie already playing");
             return;
         }
+        */
         Log.d(TAG, "starting movie");
-        callback = new SpeedControlCallback();
-        SurfaceTexture st = mTextureView.getSurfaceTexture();
-        mPlayTask = new PlayMovieTask(mMovieFiles[mSelectedMovie], 0,
-                new Surface(st), callback, this);
+        if (savedSurfaceTexture == null) savedSurfaceTexture = mTextureView.getSurfaceTexture();
+        player.SetSurfaceTexture(savedSurfaceTexture);
+        player.SetSource(mMovieFiles[mSelectedMovie]);
+        /*
         if (((CheckBox) findViewById(R.id.loopPlayback_checkbox)).isChecked()) {
             mPlayTask.setLoopMode(true);
         }
         if (((CheckBox) findViewById(R.id.locked60fps_checkbox)).isChecked()) {
             callback.setFixedPlaybackRate(15);
             //mPlayTask.SetRateAndGetStatus(1f);
-        } else {
-        	callback.setFixedPlaybackRate(30);
-        	//mPlayTask.SetRateAndGetStatus(0.5f);
         }
-
+        */
         mShowStopLabel = true;
         updateControls();
-        mPlayTask.execute();    	
+        player.PreRollVideo(0);    	
     }
     public void clickPlayStop(View unused) {
         if (mShowStopLabel) {
@@ -166,10 +163,8 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
      * Requests stoppage if a movie is currently playing.
      */
     private void stopPlayback() {
-        if (mPlayTask != null) {
-            mPlayTask.requestStop();
-            mPlayTask = null;
-        }
+    	player.EndPlayback();
+    	mShowStopLabel = false;
     }
 
     /**
@@ -191,20 +186,13 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
     }
 
 	@Override
-	public void onFinishMovie() {
-        mShowStopLabel = false;
-        updateControls();
-        mPlayTask = null;		
-	}
-
-	@Override
 	public void onProgressChanged(SeekBar seekBar, int progress,
 			boolean fromUser) {
-		if (!fromUser || mPlayTask == null) {
+		if (!fromUser) {
 			Log.i(TAG, "Progress not doing anything");
 			return;
 		}
-		mPlayTask.SetRateAndGetStatus(0.01f*progress);
+		player.SetRateAndGetStatus(0.01f*progress);
 	}
 
 	@Override
@@ -215,6 +203,21 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
 
 	@Override
 	public void onStopTrackingTouch(SeekBar seekBar) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onFinishMovie(int threadIndex) {
+		runOnUiThread(new Runnable() {
+	        public void run() {
+	        	updateControls();
+	        }
+	    });
+	}
+
+	@Override
+	public void onMovieBuffered(int threadIndex) {
 		// TODO Auto-generated method stub
 		
 	}
