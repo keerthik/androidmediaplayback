@@ -17,11 +17,11 @@
 package com.activetheoryinc.grafika;
 
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
-import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.AdapterView;
@@ -48,7 +48,7 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
     private String[] mMovieFiles;
     private int mSelectedMovie;
     private boolean mShowStopLabel;
-    private NexusPlaybackEngine player;
+    private NexusPlaybackEngine player = null;
     //private PlayMovieTask mPlayTask;
 
     @Override
@@ -82,12 +82,18 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         
         seekbar.setOnSeekBarChangeListener(this);
         
-        player = new NexusPlaybackEngine(this);
+        if (player == null) player = new NexusPlaybackEngine(this);
     }
 
     @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        Log.i(TAG, "Just a new config");
+        setContentView(R.layout.activity_play_movie);
+    }
+    
+    @Override
 	protected void onPause() {
-        Log.i(TAG, "PlayMovieActivity onPause");
 		super.onPause();
 		player.onPause();
 	}
@@ -95,12 +101,16 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
     @Override
 	protected void onResume() {
 		super.onResume();
-
 		if (savedSurfaceTexture != null)
 			mTextureView.setSurfaceTexture(savedSurfaceTexture);
 		player.onResume();
 	}
 
+    @Override
+    protected void onDestroy() {
+    	player.EndPlayback();
+    	super.onDestroy();
+    }
 
     /*
      * Called when the movie Spinner gets touched.
@@ -111,7 +121,7 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         mSelectedMovie = spinner.getSelectedItemPosition();
         Log.d(TAG, "onItemSelected: " + mSelectedMovie + " '" + mMovieFiles[mSelectedMovie] + "'");
         if (player.isCurrentlyPlaying()) {
-        	
+        	Log.i(TAG, "New selection while playing");
         }
     }
 
@@ -149,6 +159,7 @@ public class PlayMovieActivity extends Activity implements OnItemSelectedListene
         updateControls();
         player.PreRollVideo(0);    	
     }
+    
     public void clickPlayStop(View unused) {
         if (mShowStopLabel) {
             stopPlayback();
